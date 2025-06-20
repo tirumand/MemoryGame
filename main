@@ -1,0 +1,23 @@
+# Import modules
+import pygame, time, random 
+import Game from game.py
+
+
+def main():
+    # Initializing pygame
+    pygame.init()
+    
+    # Create the window and set its size
+    width = 500
+    height = 410
+    size = (width, height)
+    surface = pygame.display.set_mode(size)
+    
+    # Set the title of the window
+    pygame.display.set_caption('Memory')
+    
+    # Start the game
+    game = Game(surface)
+    game.play()
+
+main()
