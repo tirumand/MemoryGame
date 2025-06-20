@@ -1,0 +1,174 @@
+class Game:
+    # Initializing the surface, the images, the board, the list of clicked tiles, 
+    # the list of revealed(exposed) tiles, and the score
+    def __init__(self, surface):
+        self.surface = surface
+        self.close_clicked = False
+        self.continue_game = True
+        
+        self.image_list = []
+        self.image_index = 0
+        self.createImages() 
+        
+        self.board = []
+        self.createTile()
+        
+        self.clicked_tiles=[]
+        self.revealed = []
+        
+        self.scores = 0
+        self.start_time = round(time.time())
+
+    # Creating the 8 images 
+    def createImages(self):
+        # Open the 8 images, read it, load it, and append them to the empty list
+        for i in range(1,9):
+            file = open('image'+str(i)+'.jpg', 'r')
+            image = pygame.image.load(file)
+            self.image_list.append(image)
+        # Concatenate the list to create 16 images, and then randomly shuffle 16 images
+        self.image_list = self.image_list + self.image_list
+        random.shuffle(self.image_list)
+
+    # Creating the 4x4 tile board
+    def createTile(self):
+        # Represents the size of the image tiles
+        tileWidth = self.image_list[0].get_width()
+        tileHeight = self.image_list[0].get_height()  
+        
+        for rowIndex in range(0,4):
+            row = []
+            for columnIndex in range(0,4):
+                #width = 100
+                x = (columnIndex * tileWidth) 
+                #height = 100
+                y = (rowIndex * tileHeight)
+                # Adding each image to the tiles after creating the tiles 
+                images = self.image_list[self.image_index]                
+                tile = Tile(x, y, tileWidth, tileHeight, images, self.surface)
+                self.image_index = self.image_index + 1
+                row.append(tile)
+            # Making the board with all the tiles and the images
+            self.board.append(row)
+    
+    # Play the game until the player presses the close box.
+    def play(self):
+        while not self.close_clicked:  
+            self.handle_event()
+            self.draw()            
+            if self.continue_game:
+                self.update()
+                self.update_score()
+                self.decide_continue()
+    
+    # Checks if the user pressed close box or not
+    # Checks if the user clicks a button down or not
+    def handle_event(self):
+        event = pygame.event.poll()
+        if event.type == pygame.QUIT:
+            self.close_clicked = True
+        if event.type == pygame.MOUSEBUTTONUP:
+            self.handle_mouse_up(event)
+
+    # What happens when we click a button down 
+    def handle_mouse_up(self,event):
+        # When the game is going on, the tile is appened to the clicked_tiles 
+        # through the process of select() function from the Tile class
+        if self.continue_game == True:
+            for row in self.board:
+                for tile in row:
+                    if tile.mouse_click(event.pos):
+                        self.clicked_tiles.append(tile)
+    
+    # Updates the score                    
+    def update_score(self):
+        # round the starting time to the current time returns the seconds
+        currentTime = round(time.time())
+        self.scores = currentTime - self.start_time
+        
+    # Draws all the game objects to screen
+    def draw(self):
+        # Clears screen before drawing game objects
+        self.surface.fill(pygame.Color('black'))
+        
+        # Draws the tiles with the images
+        for row in self.board:
+            for tile in row:
+                tile.draw()        
+        
+        # Draws the score(the timer)       
+        font = pygame.font.Font(None, 70)
+        text = font.render(str(self.scores), True, pygame.Color('white'), 0)
+        self.surface.blit(text, (440,0)) 
+        pygame.display.flip()              
+    
+    # Update all of our game's objects    
+    def update(self):
+        # if there are 2 tiles that you clicked on, it goes to game_state() function
+        # to determine what happens when the tiles equal and when they don't
+        if len(self.clicked_tiles) == 2:
+            self.state_of_game()
+    
+    # What happens when 2 tiles are clicked
+    def state_of_game(self):
+        tile1 = self.clicked_tiles[0]
+        tile2 = self.clicked_tiles[1]
+        # When 2 tiles clicked are same, then add the tiles to the self.revealed list
+        if tile1 == tile2:
+            self.revealed.append(tile1)
+            self.revealed.append(tile2)
+        # When 2 tiles clicked aren't same, then delay for 0.5 sec 
+        # and turn the tiles to hidden, as well as empty the clicked_tiles list
+        else:
+            time.sleep(0.5)
+            tile1.is_hidden = True
+            tile2.is_hidden = True
+        self.clicked_tiles = []
+        
+    # Stops the game when all 16 images are revealed
+    def decide_continue(self):
+        if len(self.revealed) == 16:
+            self.continue_game = False
+    
+         
+class Tile:
+    # Question mark iamge
+    hidden_image = pygame.image.load('image0.jpg')
+    
+    # Initializes the tile's attributes
+    def __init__(self,x,y,width,height,image, surface):
+        self.image = image
+        self.surface = surface
+        self.rect = pygame.Rect(x,y,width,height)
+        self.is_hidden = True
+        self.clicked = False
+    
+    # Draws the images
+    def draw(self):
+        # If the images are hidden, then the question mark image shows
+        if self.is_hidden == True:
+            self.surface.blit(Tile.hidden_image,self.rect)
+            pygame.draw.rect(self.surface, pygame.Color('BlACK'), self.rect, 10)
+        # If the images aren't hidden, then the vaious images show
+        else:
+            self.surface.blit(self.image,self.rect)
+            pygame.draw.rect(self.surface, pygame.Color('BlACK'), self.rect, 10)
+            self.clicked = True
+    
+    # if the question mark image is visible and you clicked on the tile, 
+    # the image underneath becomes visible 
+    def mouse_click(self, position):
+        checked = False
+        if self.rect.collidepoint(position) and self.is_hidden:
+            self.is_hidden = False
+            checked = True
+        return checked
+    
+    # when the image beneath becomes visible, if the two images equal- returns true
+    # or else returns False
+    # without this function, even same tiles will turn back to question_mark image
+    def __eq__(self, other):
+        if self.image == other.image:
+            return True
+        else:
+            return False
